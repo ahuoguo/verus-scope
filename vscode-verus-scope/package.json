@@ -1,0 +1,93 @@
+{
+  "name": "verus-scope",
+  "displayName": "Verus Scope",
+  "description": "Classify and display Verus exec/spec/proof code: assumptions red, specs yellow, proofs grey, with three display modes.",
+  "version": "0.1.0",
+  "publisher": "verus-scope",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Visualization",
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:rust",
+    "onLanguage:verus"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "verus-scope.cycleMode",
+        "title": "Verus Scope: Cycle Display Mode"
+      },
+      {
+        "command": "verus-scope.mode1",
+        "title": "Verus Scope: Mode 1 — Show Everything"
+      },
+      {
+        "command": "verus-scope.mode2",
+        "title": "Verus Scope: Mode 2 — Exec + Spec + Assumptions (hide proofs)"
+      },
+      {
+        "command": "verus-scope.mode3",
+        "title": "Verus Scope: Mode 3 — Exec Only"
+      },
+      {
+        "command": "verus-scope.openPreview",
+        "title": "Verus Scope: Open Filtered Preview to the Side"
+      }
+    ],
+    "configuration": {
+      "title": "Verus Scope",
+      "properties": {
+        "verus-scope.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Verus exec/spec/proof colorization."
+        },
+        "verus-scope.assumptionColor": {
+          "type": "string",
+          "default": "rgba(241, 76, 76, 0.16)",
+          "description": "Line background color for assumptions (assume, external_body, assume_specification, axiom, admit)."
+        },
+        "verus-scope.specColor": {
+          "type": "string",
+          "default": "rgba(215, 186, 125, 0.14)",
+          "description": "Line background color for spec code (spec fns, requires/ensures/invariant/decreases, ghost)."
+        },
+        "verus-scope.proofColor": {
+          "type": "string",
+          "default": "rgba(128, 128, 128, 0.16)",
+          "description": "Line background color for proof code (proof fns, proof blocks, asserts, lemma calls)."
+        },
+        "verus-scope.hiddenOpacity": {
+          "type": "string",
+          "default": "0.18",
+          "description": "Opacity for hidden-category code that cannot be folded away (inline spans, fold anchor lines)."
+        },
+        "verus-scope.autoFold": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically fold hidden regions when switching to display mode 2 or 3."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./ && cp node_modules/web-tree-sitter/tree-sitter.wasm wasm/",
+    "vscode:prepublish": "npm run compile",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "dependencies": {
+    "web-tree-sitter": "^0.25.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.4.0"
+  }
+}

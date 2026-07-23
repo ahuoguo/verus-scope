@@ -1,0 +1,8 @@
+src/**
+test/**
+tsconfig.json
+out/**/*.map
+node_modules/typescript/**
+node_modules/@types/**
+node_modules/.bin/**
+node_modules/.package-lock.json
