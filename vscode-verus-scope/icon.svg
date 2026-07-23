@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Verus gear being observed, top-right -->
+  <image xlink:href="verus-logo.png" x="258" y="6" width="244" height="244"/>
+
+  <!-- Telescope, cartoon style like smt-scope: black outline, grey shading -->
+  <g stroke="#1a1a1a" stroke-width="11" stroke-linejoin="round" stroke-linecap="round">
+    <!-- tripod legs (global coords, mount at 195,330) -->
+    <g fill="none">
+      <line x1="195" y1="330" x2="95"  y2="480"/>
+      <line x1="195" y1="330" x2="295" y2="480"/>
+      <line x1="195" y1="330" x2="195" y2="485"/>
+    </g>
+    <!-- ground bar -->
+    <line x1="60" y1="485" x2="330" y2="485" fill="none"/>
+
+    <!-- telescope tube, drawn pointing right then rotated up toward the gear -->
+    <g transform="rotate(-38 195 330)">
+      <!-- eyepiece -->
+      <rect x="55" y="315" width="42" height="30" rx="8" fill="#bfbfbf"/>
+      <!-- mid segment -->
+      <rect x="93" y="305" width="70" height="50" rx="10" fill="#d9d9d9"/>
+      <!-- main barrel -->
+      <rect x="159" y="295" width="140" height="70" rx="14" fill="#e8e8e8"/>
+      <!-- barrel shading stripe -->
+      <rect x="172" y="306" width="114" height="14" rx="7" fill="#ffffff" stroke="none"/>
+      <!-- orange accent band (ties to Verus colors) -->
+      <rect x="280" y="293" width="16" height="74" rx="6" fill="#f2994a"/>
+      <!-- objective ring -->
+      <rect x="296" y="288" width="26" height="84" rx="10" fill="#4d4d4d"/>
+    </g>
+
+    <!-- mount joint on top of tripod -->
+    <circle cx="195" cy="330" r="17" fill="#4d4d4d"/>
+    <circle cx="195" cy="330" r="5" fill="#f2994a" stroke="none"/>
+  </g>
+</svg>

@@ -129,6 +129,14 @@ export function classify(tree: Tree, text: string): Classification {
 
     if (SPEC_CLAUSE_NODES.has(t)) {
       mode.fill(SPEC, node.startIndex, node.endIndex);
+      // Error recovery can attach the fn/loop body block to the clause
+      // (a block is a valid expression after a trailing comma). A bare
+      // block child is really body code — leave it exec.
+      for (const ch of node.namedChildren) {
+        if (ch && ch.type === "block") {
+          mode.fill(EXEC, ch.startIndex, ch.endIndex);
+        }
+      }
     } else if (PROOF_NODES.has(t)) {
       const [a, b] = stmtSpan(node);
       mode.fill(PROOF, a, b);

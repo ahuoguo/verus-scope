@@ -3,7 +3,8 @@
   "displayName": "Verus Scope",
   "description": "Classify and display Verus exec/spec/proof code: assumptions red, specs yellow, proofs grey, with three display modes.",
   "version": "0.1.0",
-  "publisher": "verus-scope",
+  "publisher": "ahuoguo",
+  "icon": "icon.png",
   "license": "MIT",
   "engines": {
     "vscode": "^1.85.0"
