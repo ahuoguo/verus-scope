@@ -17,6 +17,7 @@ const MODE_LABEL: Record<DisplayMode, string> = {
   1: "1: everything",
   2: "2: exec+spec+assumptions",
   3: "3: exec only",
+  4: "4: off",
 };
 
 let parser: Parser | undefined;
@@ -86,7 +87,7 @@ function decorateEditor(editor: vscode.TextEditor) {
   if (!decorations || !hiddenDecoration) return;
   const doc = editor.document;
   if (!isVerusDoc(doc)) return;
-  if (!config().get<boolean>("enabled", true)) {
+  if (!config().get<boolean>("enabled", true) || displayMode === 4) {
     for (const st of ["spec", "proof", "assume"] as Style[]) {
       editor.setDecorations(decorations[st], []);
     }
@@ -130,7 +131,7 @@ async function refoldEditor(editor: vscode.TextEditor) {
     foldedLines.delete(key);
   }
 
-  if (displayMode === 1 || !config().get<boolean>("autoFold", true)) return;
+  if (displayMode === 1 || displayMode === 4 || !config().get<boolean>("autoFold", true)) return;
   const cls = getClassification(doc);
   if (!cls) return;
 
@@ -158,7 +159,7 @@ class VerusFoldingProvider implements vscode.FoldingRangeProvider {
   }
 
   provideFoldingRanges(doc: vscode.TextDocument): vscode.FoldingRange[] {
-    if (displayMode === 1 || !isVerusDoc(doc)) return [];
+    if (displayMode === 1 || displayMode === 4 || !isVerusDoc(doc)) return [];
     const cls = getClassification(doc);
     if (!cls) return [];
     const ranges: vscode.FoldingRange[] = [];
@@ -193,7 +194,8 @@ class VerusPreviewProvider implements vscode.TextDocumentContentProvider {
     const cls = getClassification(doc);
     if (!cls) return "// verus-scope: parse failed";
     const { text, spans } = filterText(doc.getText(), cls, mode, true);
-    previewSpans.set(uri.toString(), { spans });
+    // mode 4: plain text, no coloring
+    previewSpans.set(uri.toString(), { spans: mode === 4 ? [] : spans });
     return text;
   }
 }
@@ -219,7 +221,7 @@ function updateStatusBar() {
   statusBar.text = `$(verified) Verus ${MODE_LABEL[displayMode]}`;
   statusBar.tooltip =
     "Verus Scope display mode (click to cycle)\n" +
-    "1: everything · 2: hide proofs · 3: exec only\n" +
+    "1: everything · 2: hide proofs · 3: exec only · 4: off\n" +
     "assumptions red · spec yellow · proof grey";
   statusBar.show();
 }
@@ -275,11 +277,12 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("verus-scope.cycleMode", () =>
-      setMode(((displayMode % 3) + 1) as DisplayMode)
+      setMode(((displayMode % 4) + 1) as DisplayMode)
     ),
     vscode.commands.registerCommand("verus-scope.mode1", () => setMode(1)),
     vscode.commands.registerCommand("verus-scope.mode2", () => setMode(2)),
     vscode.commands.registerCommand("verus-scope.mode3", () => setMode(3)),
+    vscode.commands.registerCommand("verus-scope.mode4", () => setMode(4)),
     vscode.commands.registerCommand("verus-scope.openPreview", async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor || !isVerusDoc(editor.document)) {

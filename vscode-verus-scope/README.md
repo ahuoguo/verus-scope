@@ -1,7 +1,7 @@
 # Verus Scope
 
 VS Code extension that classifies [Verus](https://github.com/verus-lang/verus)
-code into **exec / spec / proof** using the
+code into exec / spec / proof using the
 [tree-sitter-verus](https://github.com/secure-foundations/tree-sitter-verus)
 grammar, and displays it in three modes:
 
@@ -59,16 +59,14 @@ and the preview are all derived from that classification.
 
 ## Development
 
+
+
 ```sh
 npm install
 npm run compile
-# F5 from the repo root launches an Extension Development Host
 
 # terminal smoke test of the classifier (ANSI rendering):
 node test/cli.js -m 2 ../examples/demo.rs
-
-# rebuild the grammar wasm (needs emscripten or docker):
-cd ../tree-sitter-verus && tree-sitter build --wasm -o ../vscode-verus-scope/wasm/verus.wasm .
 
 # package a .vsix:
 npx @vscode/vsce package

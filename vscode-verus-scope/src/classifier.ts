@@ -14,7 +14,7 @@ export const SPEC = 1;
 export const PROOF = 2;
 
 export type Style = "exec" | "spec" | "proof" | "assume";
-export type DisplayMode = 1 | 2 | 3;
+export type DisplayMode = 1 | 2 | 3 | 4;
 
 export interface Classification {
   /** per-character mode: EXEC | SPEC | PROOF */
@@ -236,7 +236,8 @@ function markerStyleAt(cls: Classification, i: number): Style {
 
 /** Is the character at i visible under the given display mode? */
 export function visibleAt(cls: Classification, i: number, dm: DisplayMode): boolean {
-  if (dm === 1) return true;
+  // mode 4: special display off — everything visible
+  if (dm === 1 || dm === 4) return true;
   if (dm === 2) {
     // hide proof code, incl. spec clauses of proof-mode items — unless assumed
     return !((cls.mode[i] === PROOF || cls.item[i] === PROOF) && !cls.assumed[i]);
