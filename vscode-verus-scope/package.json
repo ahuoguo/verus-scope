@@ -2,7 +2,7 @@
   "name": "verus-scope",
   "displayName": "Verus Scope",
   "description": "Classify and display Verus exec/spec/proof code: assumptions red, specs yellow, proofs grey, with three display modes.",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "publisher": "ahuoguo",
   "icon": "icon.png",
   "license": "MIT",

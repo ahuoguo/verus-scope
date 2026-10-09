@@ -137,9 +137,21 @@ async function refoldEditor(editor: vscode.TextEditor) {
 
   // Fold anchored on the line *before* each hidden block so the entire
   // block disappears behind the anchor line's fold marker.
+  // VS Code keeps one folding range per start line across all providers, so
+  // another provider (e.g. rust-analyzer's range for a `{` opened on the
+  // anchor line) can shadow ours; folding the anchor would then hide visible
+  // code. Only fold anchors whose merged range is exactly ours — the rest
+  // stay dimmed.
+  const merged =
+    (await vscode.commands.executeCommand<vscode.FoldingRange[]>(
+      "vscode.executeFoldingRangeProvider",
+      doc.uri
+    )) ?? [];
+  const mergedEnd = new Map<number, number>();
+  for (const r of merged) mergedEnd.set(r.start, r.end);
   const anchors: number[] = [];
-  for (const [startLine] of hiddenLineBlocks(doc.getText(), cls, displayMode)) {
-    if (startLine > 0) anchors.push(startLine - 1);
+  for (const [startLine, endLine] of hiddenLineBlocks(doc.getText(), cls, displayMode)) {
+    if (startLine > 0 && mergedEnd.get(startLine - 1) === endLine) anchors.push(startLine - 1);
   }
   if (anchors.length > 0) {
     await vscode.commands.executeCommand("editor.fold", {
