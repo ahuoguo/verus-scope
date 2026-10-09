@@ -71,10 +71,27 @@ const ASSUME_CALLS = new Set(["admit"]);
 const ASSUME_ATTR_RE =
   /\bverifier\s*(?:::|\()\s*(external_body|external_fn_specification|external_type_specification|external_trait_specification|external_trait_blanket|external)\b/;
 
+/**
+ * Invariant / atomic-update opening macros whose `{ .. }` body is ordinary
+ * Verus code (with `let tracked`, `proof { .. }`, ...). tree-sitter leaves
+ * macro arguments as an opaque token_tree, so the body is re-parsed.
+ */
+const BODY_MACRO_RE = /^(?:try_)?open_\w*(?:invariant|atomic_update)\w*$/;
+const BODY_WRAPPER = "fn _()";
+
 /** bare `axiom fn` keyword (newer Verus; not a grammar keyword yet). */
 const AXIOM_KEYWORDS = new Set(["axiom"]);
 
-export function classify(tree: Tree, text: string): Classification {
+/**
+ * `parse` (optional) re-parses a source string; when given, the bodies of
+ * invariant-opening macros (see BODY_MACRO_RE) are classified too.
+ * Trees it returns are deleted after use.
+ */
+export function classify(
+  tree: Tree,
+  text: string,
+  parse?: (src: string) => Tree | null
+): Classification {
   const n = text.length;
   const mode = new Uint8Array(n); // EXEC by default
   const assumed = new Uint8Array(n);
@@ -178,6 +195,8 @@ export function classify(tree: Tree, text: string): Classification {
       if (mac && PROOF_MACROS.has(nodeText(mac))) {
         const [a, b] = stmtSpan(node);
         mode.fill(PROOF, a, b);
+      } else if (mac && parse && BODY_MACRO_RE.test(nodeText(mac))) {
+        classifyMacroBody(node);
       }
     } else if (t === "call_expression") {
       const fn = node.childForFieldName("function");
@@ -186,6 +205,34 @@ export function classify(tree: Tree, text: string): Classification {
         mode.fill(PROOF, a, b);
         assumed.fill(1, a, b);
       }
+    }
+  };
+
+  /**
+   * Re-parse the trailing `{ .. }` argument of a body macro as a function
+   * body. The source is masked to the same length (everything outside the
+   * body blanked, line breaks kept) so the sub-tree's offsets match `text`.
+   */
+  const classifyMacroBody = (node: Node) => {
+    const args = node.namedChildren.find((ch) => ch && ch.type === "token_tree");
+    if (!args) return;
+    const trees = args.namedChildren.filter((ch) => ch && ch.type === "token_tree");
+    const body = trees[trees.length - 1];
+    if (!body || text[body.startIndex] !== "{" || body.startIndex < BODY_WRAPPER.length) return;
+    const a = body.startIndex;
+    const b = body.endIndex;
+    const masked =
+      text.slice(0, a).replace(/[^\r\n]/g, " ").slice(0, a - BODY_WRAPPER.length) +
+      BODY_WRAPPER +
+      text.slice(a, b);
+    const sub = parse!(masked);
+    if (!sub) return;
+    try {
+      const fn = sub.rootNode.descendantsOfType("function_item")[0];
+      const block = fn?.childForFieldName("body");
+      if (block && block.startIndex === a && block.endIndex === b) walk(block);
+    } finally {
+      sub.delete();
     }
   };
 

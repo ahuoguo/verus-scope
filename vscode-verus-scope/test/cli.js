@@ -26,7 +26,7 @@ async function main() {
   for (const file of files) {
     const src = fs.readFileSync(file, "utf8");
     const tree = parser.parse(src);
-    const cls = classify(tree, src);
+    const cls = classify(tree, src, (s) => parser.parse(s));
 
     if (mode === 1) {
       // full render with colors

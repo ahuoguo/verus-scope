@@ -77,7 +77,7 @@ function getClassification(doc: vscode.TextDocument): Classification | undefined
   const text = doc.getText();
   const tree = parser.parse(text);
   if (!tree) return undefined;
-  const cls = classify(tree, text);
+  const cls = classify(tree, text, (src) => parser!.parse(src));
   tree.delete();
   cache.set(key, { version: doc.version, cls });
   return cls;
