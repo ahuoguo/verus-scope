@@ -1,3 +1,3 @@
 [submodule "tree-sitter-verus"]
 	path = tree-sitter-verus
-	url = https://github.com/secure-foundations/tree-sitter-verus
+	url = https://github.com/ahuoguo/tree-sitter-verus
