@@ -26,6 +26,12 @@ export interface Classification {
    * Lets a proof fn's spec clauses hide together with the fn in mode 2.
    */
   item: Uint8Array;
+  /**
+   * 0-based lines on which a multi-line syntax node starts. Other folding
+   * providers (rust-analyzer) may start a range there, which would clash
+   * with a fold anchored on that line.
+   */
+  nodeStartLines: Set<number>;
 }
 
 /** Signature/loop clauses: specification text. */
@@ -96,6 +102,7 @@ export function classify(
   const mode = new Uint8Array(n); // EXEC by default
   const assumed = new Uint8Array(n);
   const item = new Uint8Array(n);
+  const nodeStartLines = new Set<number>();
 
   const nodeText = (node: Node) => text.slice(node.startIndex, node.endIndex);
 
@@ -236,10 +243,26 @@ export function classify(
     }
   };
 
+  /** Mode of an item, looking through a declaration_with_attrs wrapper. */
+  const wrappedItemMode = (node: Node): number => {
+    if (node.type === "declaration_with_attrs") {
+      const inner = node.namedChildren.filter(
+        (ch) => ch && ch.type !== "attribute_item" && !ch.type.endsWith("_comment")
+      );
+      const last = inner[inner.length - 1];
+      return last ? itemMode(last) : -1;
+    }
+    return itemMode(node);
+  };
+
   const walk = (node: Node) => {
     classifyNode(node);
+    // a line comment's span includes its newline, ending at column 0 of the next row
+    const endRow = node.endPosition.column === 0 ? node.endPosition.row - 1 : node.endPosition.row;
+    if (endRow > node.startPosition.row) nodeStartLines.add(node.startPosition.row);
     let attrStart = -1; // first attribute of a consecutive run
     let assumeAttr = false;
+    let docStart = -1; // first outer doc comment of a consecutive run
     for (const ch of node.children) {
       if (!ch) continue;
       if (ch.type === "attribute_item") {
@@ -247,7 +270,21 @@ export function classify(
         if (ASSUME_ATTR_RE.test(nodeText(ch))) assumeAttr = true;
       } else if (ch.type === "line_comment" || ch.type === "block_comment") {
         // attributes may be separated from their item by comments
+        if (ch.childForFieldName("outer")) {
+          if (docStart < 0) docStart = ch.startIndex;
+        } else {
+          docStart = -1;
+        }
       } else if (ch.isNamed) {
+        if (docStart >= 0) {
+          // doc comments share the mode of the item they document
+          const m = wrappedItemMode(ch);
+          if (m >= 0) {
+            mode.fill(m, docStart, ch.startIndex);
+            item.fill(m, docStart, ch.startIndex);
+          }
+          docStart = -1;
+        }
         if (attrStart >= 0) {
           // attributes share the fate of the item they decorate
           const m = itemMode(ch);
@@ -265,7 +302,7 @@ export function classify(
   };
 
   walk(tree.rootNode);
-  return { mode, assumed, item };
+  return { mode, assumed, item, nodeStartLines };
 }
 
 export function styleAt(cls: Classification, i: number): Style {

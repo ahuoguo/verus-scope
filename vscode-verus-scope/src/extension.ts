@@ -117,22 +117,52 @@ function decorateEditor(editor: vscode.TextEditor) {
   editor.setDecorations(hiddenDecoration, hidden);
 }
 
+/** Hidden blocks that get a folding range: [anchor line, end line]. */
+function foldBlocks(doc: vscode.TextDocument, cls: Classification, dm: DisplayMode): Array<[number, number]> {
+  const out: Array<[number, number]> = [];
+  for (const [startLine, endLine] of hiddenLineBlocks(doc.getText(), cls, dm)) {
+    const anchor = startLine - 1;
+    // A syntax node starting on the anchor line likely has its own folding
+    // range from another provider. VS Code keeps one range per start line and
+    // carries a collapsed state over to whichever range starts there, so a
+    // fold here could end up hiding that (larger) range. Leave it dimmed.
+    if (anchor >= 0 && !cls.nodeStartLines.has(anchor)) out.push([anchor, endLine]);
+  }
+  return out;
+}
+
 async function refoldEditor(editor: vscode.TextEditor) {
   const doc = editor.document;
   if (!isVerusDoc(doc)) return;
+  // editor.fold / editor.unfold act on the *active* editor; running them for
+  // another visible editor would apply its lines to the wrong document.
+  // Other editors are refolded when they become active.
+  if (editor !== vscode.window.activeTextEditor) return;
   const key = doc.uri.toString();
 
-  const prev = foldedLines.get(key) ?? [];
-  if (prev.length > 0) {
+  const cls = getClassification(doc);
+
+  // Unfold every anchor of every mode, not just what we folded this session:
+  // VS Code restores collapsed regions across reloads and keeps collapsed
+  // regions after their provider stops reporting them, so stale folds from
+  // another mode (e.g. mode 3's spec fns while in mode 2) would linger.
+  const unfoldLines = new Set(foldedLines.get(key) ?? []);
+  if (cls) {
+    for (const m of [2, 3] as DisplayMode[]) {
+      for (const [startLine] of hiddenLineBlocks(doc.getText(), cls, m)) {
+        if (startLine > 0) unfoldLines.add(startLine - 1);
+      }
+    }
+  }
+  if (unfoldLines.size > 0) {
     await vscode.commands.executeCommand("editor.unfold", {
       levels: 1,
-      selectionLines: prev,
+      selectionLines: [...unfoldLines],
     });
-    foldedLines.delete(key);
   }
+  foldedLines.delete(key);
 
   if (displayMode === 1 || displayMode === 4 || !config().get<boolean>("autoFold", true)) return;
-  const cls = getClassification(doc);
   if (!cls) return;
 
   // Fold anchored on the line *before* each hidden block so the entire
@@ -150,8 +180,8 @@ async function refoldEditor(editor: vscode.TextEditor) {
   const mergedEnd = new Map<number, number>();
   for (const r of merged) mergedEnd.set(r.start, r.end);
   const anchors: number[] = [];
-  for (const [startLine, endLine] of hiddenLineBlocks(doc.getText(), cls, displayMode)) {
-    if (startLine > 0 && mergedEnd.get(startLine - 1) === endLine) anchors.push(startLine - 1);
+  for (const [anchor, endLine] of foldBlocks(doc, cls, displayMode)) {
+    if (mergedEnd.get(anchor) === endLine) anchors.push(anchor);
   }
   if (anchors.length > 0) {
     await vscode.commands.executeCommand("editor.fold", {
@@ -175,10 +205,8 @@ class VerusFoldingProvider implements vscode.FoldingRangeProvider {
     const cls = getClassification(doc);
     if (!cls) return [];
     const ranges: vscode.FoldingRange[] = [];
-    for (const [startLine, endLine] of hiddenLineBlocks(doc.getText(), cls, displayMode)) {
-      if (startLine > 0) {
-        ranges.push(new vscode.FoldingRange(startLine - 1, endLine, vscode.FoldingRangeKind.Region));
-      }
+    for (const [anchor, endLine] of foldBlocks(doc, cls, displayMode)) {
+      ranges.push(new vscode.FoldingRange(anchor, endLine, vscode.FoldingRangeKind.Region));
     }
     return ranges;
   }
