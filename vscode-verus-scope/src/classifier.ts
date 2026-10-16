@@ -85,8 +85,8 @@ const ASSUME_ATTR_RE =
 const BODY_MACRO_RE = /^(?:try_)?open_\w*(?:invariant|atomic_update)\w*$/;
 const BODY_WRAPPER = "fn _()";
 
-/** bare `axiom fn` keyword (newer Verus; not a grammar keyword yet). */
-const AXIOM_KEYWORDS = new Set(["axiom"]);
+/** `axiom fn` keyword child of a function item. */
+const isAxiomKeyword = (ch: Node) => ch.type === "axiom";
 
 /**
  * `parse` (optional) re-parses a source string; when given, the bodies of
@@ -121,7 +121,7 @@ export function classify(
       }
       for (const ch of node.children) {
         if (!ch) continue;
-        if (ch.type === "identifier" && AXIOM_KEYWORDS.has(nodeText(ch))) return PROOF;
+        if (isAxiomKeyword(ch)) return PROOF;
         if (ch.type === "fn") break;
       }
       return -1;
@@ -181,10 +181,10 @@ export function classify(
         mode.fill(m, node.startIndex, node.endIndex);
         item.fill(m, node.startIndex, node.endIndex);
       }
-      // bare-identifier `axiom fn ...` counts as an assumption
+      // `axiom fn ...` counts as an assumption
       for (const ch of node.children) {
         if (!ch) continue;
-        if (ch.type === "identifier" && AXIOM_KEYWORDS.has(nodeText(ch))) {
+        if (isAxiomKeyword(ch)) {
           assumed.fill(1, node.startIndex, node.endIndex);
           break;
         }
